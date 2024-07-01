@@ -1,0 +1,6 @@
+{
+    "require": {
+        "webonyx/graphql-php": "^15.12",
+      "ext-pdo": "*"
+    }
+}
