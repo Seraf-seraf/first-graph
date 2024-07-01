@@ -7,13 +7,11 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
 use GraphQL\GraphQL;
 
-// Параметры подключения к базе данных MySQL
 $host = 'localhost';
 $dbname = 'todo-rest';
 $username = 'root';
 $password = '';
 
-// Установка соединения с базой данных через PDO
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -136,6 +134,40 @@ $taskType = new ObjectType([
     ],
 ]);
 
+function getTasksByIds($ids): array
+{
+    global $pdo;
+
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $query = "SELECT * FROM tasks WHERE id IN ($placeholders)";
+        $stmt = $pdo->prepare($query);
+
+        // Привязываем каждый ID к плейсхолдеру
+        foreach ($ids as $index => $id) {
+            $stmt->bindValue($index + 1, $id, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!$tasks) {
+            throw new Exception("No tasks found");
+        }
+
+        return $tasks;
+    } catch (PDOException $e) {
+        file_put_contents('error.log', $e->getMessage() . "\n", FILE_APPEND);
+        return [
+            'error' => [
+                'message' => $e->getMessage()
+            ]
+        ];
+    }
+}
+
+
 $queryType = new ObjectType([
     'name' => 'Query',
     'fields' => [
@@ -146,6 +178,15 @@ $queryType = new ObjectType([
             ],
             'resolve' => function ($root, $args) {
                 return getTaskById($args['id']);
+            },
+        ],
+        'tasks' => [
+            'type' => Type::listOf($taskType),
+            'args' => [
+                'ids' => ['type' => Type::nonNull(Type::listOf(Type::nonNull(Type::id())))],
+            ],
+            'resolve' => function ($root, $args) {
+                return getTasksByIds($args['ids']);
             },
         ],
     ],

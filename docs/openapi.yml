@@ -1,0 +1,143 @@
+openapi: 3.0.0
+info:
+  title: Todo GraphQL API
+  description: API для управления задачами в ToDo приложении с использованием GraphQL
+  version: 1.0.0
+
+paths:
+  /graphql:
+    post:
+      summary: Выполнение GraphQL запроса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: object
+                  description: GraphQL запрос
+                  example: |
+                    query { tasks(ids: [1, 2, 3]) {id title description due_date status } }
+                mutation:
+                  type: object
+                  description: GraphQL мутация
+                  example: | 
+                    mutation { createTask( title: "New Task", description: "Description of the task", due_date: "2024-07-01 12:00:00", status: false ) { id title description due_date status } }
+      responses:
+        '200':
+          description: Успешный ответ GraphQL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/QueryResponse'
+                      - $ref: '#/components/schemas/MutationResponse'
+                  errors:
+                    type: array
+                    description: Список ошибок, если они есть
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          description: Сообщение об ошибке
+                          example: "Internal server error"
+                        locations:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              line:
+                                type: integer
+                                description: Номер строки, где возникла ошибка
+                              column:
+                                type: integer
+                                description: Номер столбца, где возникла ошибка
+                        path:
+                          type: array
+                          items:
+                            type: string
+                            description: Путь запроса, который вызвал ошибку
+                            example: ["tasks"]
+
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор задачи
+          example: "1"
+        title:
+          type: string
+          description: Название задачи
+          example: "Task 1"
+        description:
+          type: string
+          description: Описание задачи
+          example: "Description of Task 1"
+        due_date:
+          type: string
+          description: Дата выполнения задачи
+          example: "2024-07-01 12:00:00"
+        status:
+          type: boolean
+          description: Статус задачи (выполнена или нет)
+          example: true
+      required:
+        - title
+        - due_date
+    QueryResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          description: Список задач, полученных по запросу
+          items:
+            $ref: '#/components/schemas/Task'
+    MutationResponse:
+      type: object
+      properties:
+        createTask:
+          $ref: '#/components/schemas/Task'
+        updateTask:
+          $ref: '#/components/schemas/Task'
+        deleteTask:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Уникальный идентификатор удаленной задачи
+              example: 1
+    TaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Название задачи
+          example: "New Task"
+        description:
+          type: string
+          description: Описание задачи
+          example: "Description of the task"
+        due_date:
+          type: string
+          description: Дата выполнения задачи
+          example: "2024-07-01 12:00:00"
+        status:
+          type: boolean
+          description: Статус задачи (выполнена или нет)
+          example: false
+      required:
+        - title
+        - due_date
+    MutationCreateTaskInput:
+      $ref: '#/components/schemas/TaskInput'
+    MutationUpdateTaskInput:
+      $ref: '#/components/schemas/TaskInput'
